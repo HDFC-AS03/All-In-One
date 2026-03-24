@@ -245,8 +245,25 @@ jobs:
       - detect-changes
       - cd
     environment: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.environment || 'production' }}
-    if: ${{ ((github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && needs.detect-changes.outputs.naba_backend_changed == 'true') || (github.event_name == 'workflow_dispatch' && (github.event.inputs.deploy_target == 'all' || github.event.inputs.deploy_target == 'naba'))) && secrets.INSTANCE1_HOST != '' && secrets.INSTANCE1_USER != '' && secrets.INSTANCE1_SSH_KEY != '' && secrets.INSTANCE1_DEPLOY_COMMAND != '' && secrets.INSTANCE1_HEALTHCHECK_COMMAND != '' && secrets.INSTANCE1_ROLLBACK_COMMAND != '' }}
+    if: ${{ (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && needs.detect-changes.outputs.naba_backend_changed == 'true') || (github.event_name == 'workflow_dispatch' && (github.event.inputs.deploy_target == 'all' || github.event.inputs.deploy_target == 'naba')) }}
     steps:
+      - name: Validate instance1 secrets
+        env:
+          INSTANCE1_HOST: ${{ secrets.INSTANCE1_HOST }}
+          INSTANCE1_USER: ${{ secrets.INSTANCE1_USER }}
+          INSTANCE1_SSH_KEY: ${{ secrets.INSTANCE1_SSH_KEY }}
+          INSTANCE1_DEPLOY_COMMAND: ${{ secrets.INSTANCE1_DEPLOY_COMMAND }}
+          INSTANCE1_HEALTHCHECK_COMMAND: ${{ secrets.INSTANCE1_HEALTHCHECK_COMMAND }}
+          INSTANCE1_ROLLBACK_COMMAND: ${{ secrets.INSTANCE1_ROLLBACK_COMMAND }}
+        run: |
+          set -euo pipefail
+          test -n "$INSTANCE1_HOST"
+          test -n "$INSTANCE1_USER"
+          test -n "$INSTANCE1_SSH_KEY"
+          test -n "$INSTANCE1_DEPLOY_COMMAND"
+          test -n "$INSTANCE1_HEALTHCHECK_COMMAND"
+          test -n "$INSTANCE1_ROLLBACK_COMMAND"
+
       - name: SSH deploy to instance1
         uses: appleboy/ssh-action@v1.2.0
         with:
@@ -282,8 +299,25 @@ jobs:
       - detect-changes
       - cd
     environment: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.environment || 'production' }}
-    if: ${{ ((github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && needs.detect-changes.outputs.prasu_backend_changed == 'true') || (github.event_name == 'workflow_dispatch' && (github.event.inputs.deploy_target == 'all' || github.event.inputs.deploy_target == 'prasu'))) && secrets.INSTANCE2_HOST != '' && secrets.INSTANCE2_USER != '' && secrets.INSTANCE2_SSH_KEY != '' && secrets.INSTANCE2_DEPLOY_COMMAND != '' && secrets.INSTANCE2_HEALTHCHECK_COMMAND != '' && secrets.INSTANCE2_ROLLBACK_COMMAND != '' }}
+    if: ${{ (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && needs.detect-changes.outputs.prasu_backend_changed == 'true') || (github.event_name == 'workflow_dispatch' && (github.event.inputs.deploy_target == 'all' || github.event.inputs.deploy_target == 'prasu')) }}
     steps:
+      - name: Validate instance2 secrets
+        env:
+          INSTANCE2_HOST: ${{ secrets.INSTANCE2_HOST }}
+          INSTANCE2_USER: ${{ secrets.INSTANCE2_USER }}
+          INSTANCE2_SSH_KEY: ${{ secrets.INSTANCE2_SSH_KEY }}
+          INSTANCE2_DEPLOY_COMMAND: ${{ secrets.INSTANCE2_DEPLOY_COMMAND }}
+          INSTANCE2_HEALTHCHECK_COMMAND: ${{ secrets.INSTANCE2_HEALTHCHECK_COMMAND }}
+          INSTANCE2_ROLLBACK_COMMAND: ${{ secrets.INSTANCE2_ROLLBACK_COMMAND }}
+        run: |
+          set -euo pipefail
+          test -n "$INSTANCE2_HOST"
+          test -n "$INSTANCE2_USER"
+          test -n "$INSTANCE2_SSH_KEY"
+          test -n "$INSTANCE2_DEPLOY_COMMAND"
+          test -n "$INSTANCE2_HEALTHCHECK_COMMAND"
+          test -n "$INSTANCE2_ROLLBACK_COMMAND"
+
       - name: SSH deploy to instance2
         uses: appleboy/ssh-action@v1.2.0
         with:
@@ -319,8 +353,25 @@ jobs:
       - detect-changes
       - cd
     environment: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.environment || 'production' }}
-    if: ${{ ((github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && needs.detect-changes.outputs.gateway_changed == 'true') || (github.event_name == 'workflow_dispatch' && (github.event.inputs.deploy_target == 'all' || github.event.inputs.deploy_target == 'gateway'))) && secrets.INSTANCE3_HOST != '' && secrets.INSTANCE3_USER != '' && secrets.INSTANCE3_SSH_KEY != '' && secrets.INSTANCE3_DEPLOY_COMMAND != '' && secrets.INSTANCE3_HEALTHCHECK_COMMAND != '' && secrets.INSTANCE3_ROLLBACK_COMMAND != '' }}
+    if: ${{ (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && needs.detect-changes.outputs.gateway_changed == 'true') || (github.event_name == 'workflow_dispatch' && (github.event.inputs.deploy_target == 'all' || github.event.inputs.deploy_target == 'gateway')) }}
     steps:
+      - name: Validate instance3 secrets
+        env:
+          INSTANCE3_HOST: ${{ secrets.INSTANCE3_HOST }}
+          INSTANCE3_USER: ${{ secrets.INSTANCE3_USER }}
+          INSTANCE3_SSH_KEY: ${{ secrets.INSTANCE3_SSH_KEY }}
+          INSTANCE3_DEPLOY_COMMAND: ${{ secrets.INSTANCE3_DEPLOY_COMMAND }}
+          INSTANCE3_HEALTHCHECK_COMMAND: ${{ secrets.INSTANCE3_HEALTHCHECK_COMMAND }}
+          INSTANCE3_ROLLBACK_COMMAND: ${{ secrets.INSTANCE3_ROLLBACK_COMMAND }}
+        run: |
+          set -euo pipefail
+          test -n "$INSTANCE3_HOST"
+          test -n "$INSTANCE3_USER"
+          test -n "$INSTANCE3_SSH_KEY"
+          test -n "$INSTANCE3_DEPLOY_COMMAND"
+          test -n "$INSTANCE3_HEALTHCHECK_COMMAND"
+          test -n "$INSTANCE3_ROLLBACK_COMMAND"
+
       - name: SSH deploy to instance3
         uses: appleboy/ssh-action@v1.2.0
         with:
