@@ -5,9 +5,9 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
     ENV: str = "dev"
 
-    KEYCLOAK_CLIENT_ID: str
-    KEYCLOAK_CLIENT_SECRET: str
-    KEYCLOAK_REALM: str
+    KEYCLOAK_CLIENT_ID: str = "default-client"
+    KEYCLOAK_CLIENT_SECRET: str = "default-secret"
+    KEYCLOAK_REALM: str = "master"
     KEYCLOAK_SERVER_URL: str = "http://localhost:8080"
 
     KEYCLOAK_ADMIN_CLIENT_ID: str | None = None
