@@ -1,0 +1,384 @@
+name: CI-CD
+
+on:
+  push:
+    branches:
+      - main
+      - master
+      - develop
+      - "feature/**"
+  pull_request:
+    branches:
+      - main
+      - master
+      - develop
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Deployment environment"
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+        default: staging
+      deploy_target:
+        description: "Deploy scope"
+        required: true
+        type: choice
+        options:
+          - all
+          - naba
+          - prasu
+          - gateway
+          - others
+        default: all
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: ci-cd-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend-ci:
+    name: Backend CI (${{ matrix.name }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: naba
+            path: naba/AS-03-Backend
+          - name: prasu
+            path: prasu/AS-03-Backend
+
+    defaults:
+      run:
+        working-directory: ${{ matrix.path }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+          cache-dependency-path: ${{ matrix.path }}/requirements.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Ruff lint
+        run: ruff check .
+
+      - name: Run backend tests
+        run: pytest -q
+
+  frontend-ci:
+    name: Frontend CI (${{ matrix.name }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: naba
+            path: naba/Frontend
+          - name: prasu
+            path: prasu/AS-03-Frontend
+
+    defaults:
+      run:
+        working-directory: ${{ matrix.path }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: ${{ matrix.path }}/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Run frontend tests
+        run: npm run test -- --ci --watch=false
+
+      - name: Build
+        run: npm run build
+
+  detect-changes:
+    name: Detect Changed Components
+    runs-on: ubuntu-latest
+    outputs:
+      naba_backend_changed: ${{ steps.filter.outputs.naba_backend }}
+      prasu_backend_changed: ${{ steps.filter.outputs.prasu_backend }}
+      gateway_changed: ${{ steps.filter.outputs.gateway }}
+      others_changed: ${{ steps.filter.outputs.others }}
+      cd_matrix: ${{ steps.matrix.outputs.cd_matrix }}
+      has_cd_images: ${{ steps.matrix.outputs.has_cd_images }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Filter changed paths
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            naba_backend:
+              - 'naba/AS-03-Backend/**'
+            prasu_backend:
+              - 'prasu/AS-03-Backend/**'
+            gateway:
+              - 'shared-infra/gateway/**'
+              - 'shared-infra/docker-compose.yml'
+            others:
+              - 'shared-infra/**'
+              - '!shared-infra/gateway/**'
+              - '!shared-infra/docker-compose.yml'
+
+      - name: Build selective CD matrix
+        id: matrix
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          DEPLOY_TARGET: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_target || 'all' }}
+          NABA_CHANGED: ${{ steps.filter.outputs.naba_backend }}
+          PRASU_CHANGED: ${{ steps.filter.outputs.prasu_backend }}
+          GATEWAY_CHANGED: ${{ steps.filter.outputs.gateway }}
+        run: |
+          include='[]'
+
+          add_image() {
+            local image="$1"
+            local dockerfile="$2"
+            local context="$3"
+            include=$(echo "$include" | jq --arg image "$image" --arg dockerfile "$dockerfile" --arg context "$context" '. + [{"image":$image,"dockerfile":$dockerfile,"context":$context}]')
+          }
+
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            if [ "$DEPLOY_TARGET" = "all" ] || [ "$DEPLOY_TARGET" = "naba" ]; then
+              add_image "naba-backend" "naba/AS-03-Backend/Dockerfile" "naba/AS-03-Backend"
+            fi
+
+            if [ "$DEPLOY_TARGET" = "all" ] || [ "$DEPLOY_TARGET" = "prasu" ]; then
+              add_image "prasu-backend" "prasu/AS-03-Backend/Dockerfile" "prasu/AS-03-Backend"
+            fi
+
+            if [ "$DEPLOY_TARGET" = "all" ] || [ "$DEPLOY_TARGET" = "gateway" ]; then
+              add_image "shared-gateway" "shared-infra/gateway/Dockerfile" "shared-infra/gateway"
+            fi
+          else
+            if [ "$NABA_CHANGED" = "true" ]; then
+              add_image "naba-backend" "naba/AS-03-Backend/Dockerfile" "naba/AS-03-Backend"
+            fi
+
+            if [ "$PRASU_CHANGED" = "true" ]; then
+              add_image "prasu-backend" "prasu/AS-03-Backend/Dockerfile" "prasu/AS-03-Backend"
+            fi
+
+            if [ "$GATEWAY_CHANGED" = "true" ]; then
+              add_image "shared-gateway" "shared-infra/gateway/Dockerfile" "shared-infra/gateway"
+            fi
+          fi
+
+          has_images=false
+          if [ "$(echo "$include" | jq 'length')" -gt 0 ]; then
+            has_images=true
+          fi
+
+          echo "cd_matrix={\"include\":$include}" >> "$GITHUB_OUTPUT"
+          echo "has_cd_images=$has_images" >> "$GITHUB_OUTPUT"
+
+  cd:
+    name: CD (Build and Optional Push Images)
+    runs-on: ubuntu-latest
+    needs:
+      - backend-ci
+      - frontend-ci
+      - detect-changes
+    if: ${{ ((github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')) || github.event_name == 'workflow_dispatch') && needs.detect-changes.outputs.has_cd_images == 'true' }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.detect-changes.outputs.cd_matrix) }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        if: ${{ secrets.GHCR_TOKEN != '' }}
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GHCR_TOKEN }}
+
+      - name: Build and (optionally) push image
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          push: ${{ secrets.GHCR_TOKEN != '' }}
+          cache-from: type=gha,scope=${{ matrix.image }}
+          cache-to: type=gha,scope=${{ matrix.image }},mode=max
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}:latest
+            ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}:${{ github.sha }}
+
+  deploy-instance1-naba:
+    name: Deploy naba -> instance1
+    runs-on: ubuntu-latest
+    needs:
+      - backend-ci
+      - frontend-ci
+      - detect-changes
+    environment: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.environment || 'production' }}
+    if: ${{ ((github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && needs.detect-changes.outputs.naba_backend_changed == 'true') || (github.event_name == 'workflow_dispatch' && (github.event.inputs.deploy_target == 'all' || github.event.inputs.deploy_target == 'naba'))) && secrets.INSTANCE1_HOST != '' && secrets.INSTANCE1_USER != '' && secrets.INSTANCE1_SSH_KEY != '' && secrets.INSTANCE1_DEPLOY_COMMAND != '' && secrets.INSTANCE1_HEALTHCHECK_COMMAND != '' && secrets.INSTANCE1_ROLLBACK_COMMAND != '' }}
+    steps:
+      - name: SSH deploy to instance1
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.INSTANCE1_HOST }}
+          username: ${{ secrets.INSTANCE1_USER }}
+          key: ${{ secrets.INSTANCE1_SSH_KEY }}
+          port: ${{ secrets.INSTANCE1_PORT != '' && secrets.INSTANCE1_PORT || '22' }}
+          script_stop: true
+          script: |
+            set -euo pipefail
+            export GHCR_USERNAME='${{ github.actor }}'
+            export GHCR_TOKEN='${{ secrets.GHCR_TOKEN }}'
+            export NABA_IMAGE='ghcr.io/${{ github.repository_owner }}/naba-backend:${{ github.sha }}'
+            export DEPLOY_ENV='${{ github.event_name == 'workflow_dispatch' && github.event.inputs.environment || 'production' }}'
+
+            if [ -n "${{ secrets.INSTANCE1_MIGRATION_COMMAND }}" ]; then
+              ${{ secrets.INSTANCE1_MIGRATION_COMMAND }}
+            fi
+
+            ${{ secrets.INSTANCE1_DEPLOY_COMMAND }}
+
+            if ! ${{ secrets.INSTANCE1_HEALTHCHECK_COMMAND }}; then
+              echo "Health check failed on instance1. Running rollback..."
+              ${{ secrets.INSTANCE1_ROLLBACK_COMMAND }}
+              exit 1
+            fi
+
+  deploy-instance2-prasu:
+    name: Deploy prasu -> instance2
+    runs-on: ubuntu-latest
+    needs:
+      - backend-ci
+      - frontend-ci
+      - detect-changes
+    environment: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.environment || 'production' }}
+    if: ${{ ((github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && needs.detect-changes.outputs.prasu_backend_changed == 'true') || (github.event_name == 'workflow_dispatch' && (github.event.inputs.deploy_target == 'all' || github.event.inputs.deploy_target == 'prasu'))) && secrets.INSTANCE2_HOST != '' && secrets.INSTANCE2_USER != '' && secrets.INSTANCE2_SSH_KEY != '' && secrets.INSTANCE2_DEPLOY_COMMAND != '' && secrets.INSTANCE2_HEALTHCHECK_COMMAND != '' && secrets.INSTANCE2_ROLLBACK_COMMAND != '' }}
+    steps:
+      - name: SSH deploy to instance2
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.INSTANCE2_HOST }}
+          username: ${{ secrets.INSTANCE2_USER }}
+          key: ${{ secrets.INSTANCE2_SSH_KEY }}
+          port: ${{ secrets.INSTANCE2_PORT != '' && secrets.INSTANCE2_PORT || '22' }}
+          script_stop: true
+          script: |
+            set -euo pipefail
+            export GHCR_USERNAME='${{ github.actor }}'
+            export GHCR_TOKEN='${{ secrets.GHCR_TOKEN }}'
+            export PRASU_IMAGE='ghcr.io/${{ github.repository_owner }}/prasu-backend:${{ github.sha }}'
+            export DEPLOY_ENV='${{ github.event_name == 'workflow_dispatch' && github.event.inputs.environment || 'production' }}'
+
+            if [ -n "${{ secrets.INSTANCE2_MIGRATION_COMMAND }}" ]; then
+              ${{ secrets.INSTANCE2_MIGRATION_COMMAND }}
+            fi
+
+            ${{ secrets.INSTANCE2_DEPLOY_COMMAND }}
+
+            if ! ${{ secrets.INSTANCE2_HEALTHCHECK_COMMAND }}; then
+              echo "Health check failed on instance2. Running rollback..."
+              ${{ secrets.INSTANCE2_ROLLBACK_COMMAND }}
+              exit 1
+            fi
+
+  deploy-instance3-gateway:
+    name: Deploy gateway -> instance3
+    runs-on: ubuntu-latest
+    needs:
+      - backend-ci
+      - frontend-ci
+      - detect-changes
+    environment: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.environment || 'production' }}
+    if: ${{ ((github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && needs.detect-changes.outputs.gateway_changed == 'true') || (github.event_name == 'workflow_dispatch' && (github.event.inputs.deploy_target == 'all' || github.event.inputs.deploy_target == 'gateway'))) && secrets.INSTANCE3_HOST != '' && secrets.INSTANCE3_USER != '' && secrets.INSTANCE3_SSH_KEY != '' && secrets.INSTANCE3_DEPLOY_COMMAND != '' && secrets.INSTANCE3_HEALTHCHECK_COMMAND != '' && secrets.INSTANCE3_ROLLBACK_COMMAND != '' }}
+    steps:
+      - name: SSH deploy to instance3
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.INSTANCE3_HOST }}
+          username: ${{ secrets.INSTANCE3_USER }}
+          key: ${{ secrets.INSTANCE3_SSH_KEY }}
+          port: ${{ secrets.INSTANCE3_PORT != '' && secrets.INSTANCE3_PORT || '22' }}
+          script_stop: true
+          script: |
+            set -euo pipefail
+            export GHCR_USERNAME='${{ github.actor }}'
+            export GHCR_TOKEN='${{ secrets.GHCR_TOKEN }}'
+            export GATEWAY_IMAGE='ghcr.io/${{ github.repository_owner }}/shared-gateway:${{ github.sha }}'
+            export DEPLOY_ENV='${{ github.event_name == 'workflow_dispatch' && github.event.inputs.environment || 'production' }}'
+
+            ${{ secrets.INSTANCE3_DEPLOY_COMMAND }}
+
+            if ! ${{ secrets.INSTANCE3_HEALTHCHECK_COMMAND }}; then
+              echo "Health check failed on instance3. Running rollback..."
+              ${{ secrets.INSTANCE3_ROLLBACK_COMMAND }}
+              exit 1
+            fi
+
+  deploy-instance4-others:
+    name: Deploy others -> instance4
+    runs-on: ubuntu-latest
+    needs:
+      - backend-ci
+      - frontend-ci
+      - detect-changes
+    environment: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.environment || 'production' }}
+    if: ${{ ((github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && needs.detect-changes.outputs.others_changed == 'true') || (github.event_name == 'workflow_dispatch' && (github.event.inputs.deploy_target == 'all' || github.event.inputs.deploy_target == 'others'))) && secrets.INSTANCE4_HOST != '' && secrets.INSTANCE4_USER != '' && secrets.INSTANCE4_SSH_KEY != '' && secrets.INSTANCE4_DEPLOY_COMMAND != '' && secrets.INSTANCE4_HEALTHCHECK_COMMAND != '' && secrets.INSTANCE4_ROLLBACK_COMMAND != '' }}
+    steps:
+      - name: SSH deploy to instance4
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.INSTANCE4_HOST }}
+          username: ${{ secrets.INSTANCE4_USER }}
+          key: ${{ secrets.INSTANCE4_SSH_KEY }}
+          port: ${{ secrets.INSTANCE4_PORT != '' && secrets.INSTANCE4_PORT || '22' }}
+          script_stop: true
+          script: |
+            set -euo pipefail
+            export GHCR_USERNAME='${{ github.actor }}'
+            export GHCR_TOKEN='${{ secrets.GHCR_TOKEN }}'
+            export DEPLOY_ENV='${{ github.event_name == 'workflow_dispatch' && github.event.inputs.environment || 'production' }}'
+
+            ${{ secrets.INSTANCE4_DEPLOY_COMMAND }}
+
+            if ! ${{ secrets.INSTANCE4_HEALTHCHECK_COMMAND }}; then
+              echo "Health check failed on instance4. Running rollback..."
+              ${{ secrets.INSTANCE4_ROLLBACK_COMMAND }}
+              exit 1
+            fi
