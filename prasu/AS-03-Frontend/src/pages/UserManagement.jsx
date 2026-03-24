@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 
 const API_BASE = "http://localhost";
 
@@ -70,24 +70,25 @@ function RoleManagerModal({ user, onClose }) {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
 
-  useEffect(() => {
-    const fetchCurrentRoles = async () => {
-      setLoadingRoles(true);
-      setError(null);
-      try {
-        const res = await fetch(`${API_BASE}/admin/users/${user.id}/roles`, { credentials: "include" });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const json = await res.json();
-        const roles = json.data ?? json;
-        const roleKeys = roles.map(r => r.name).filter(name => Object.values(ROLE_MAP).includes(name));
-        setCurrentRoles(roleKeys);
-      } catch (err) {
-        setError("Could not load current roles: " + err.message);
-      }
-      setLoadingRoles(false);
-    };
-    fetchCurrentRoles();
+  const fetchCurrentRoles = useCallback(async () => {
+    setLoadingRoles(true);
+    setError(null);
+    try {
+      const res = await fetch(`${API_BASE}/admin/users/${user.id}/roles`, { credentials: "include" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = await res.json();
+      const roles = json.data ?? json;
+      const roleKeys = roles.map(r => r.name).filter(name => Object.values(ROLE_MAP).includes(name));
+      setCurrentRoles(roleKeys);
+    } catch (err) {
+      setError("Could not load current roles: " + err.message);
+    }
+    setLoadingRoles(false);
   }, [user.id]);
+
+  useEffect(() => {
+    fetchCurrentRoles();
+  }, [fetchCurrentRoles]);
 
   const flash = (msg, isError = false) => {
     if (isError) { setError(msg); setSuccess(null); }
