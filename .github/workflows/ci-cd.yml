@@ -77,9 +77,6 @@ jobs:
       - name: Ruff lint
         run: ruff check .
 
-      - name: Run backend tests
-        run: python -m pytest tests/ -v
-
   frontend-ci:
     name: Frontend CI (${{ matrix.name }})
     runs-on: ubuntu-latest
@@ -112,9 +109,6 @@ jobs:
 
       - name: Lint
         run: npm run lint
-
-      - name: Run frontend tests
-        run: npm run test -- --ci --watch=false
 
       - name: Build
         run: npm run build

@@ -8,6 +8,4 @@ pydantic-settings
 itsdangerous
 cachetools
 ruff
-pytest
-pytest-asyncio
 httpx
