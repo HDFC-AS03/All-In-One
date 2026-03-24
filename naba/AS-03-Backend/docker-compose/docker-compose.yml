@@ -1,0 +1,104 @@
+services:
+  backend:
+    build: ..
+    container_name: backend-app1
+    profiles:
+      - app1
+    ports:
+      - "8000:8000"
+    environment:
+      - KEYCLOAK_SERVER_URL=http://keycloak:8080
+      - KEYCLOAK_EXTERNAL_URL=http://localhost:8080
+      - KEYCLOAK_REFRESH_URL=http://host.docker.internal:8080
+      - KEYCLOAK_CLIENT_ID=${APP2_KEYCLOAK_CLIENT_ID}
+      - KEYCLOAK_REALM=${KEYCLOAK_REALM}
+      - KEYCLOAK_CLIENT_SECRET=${APP2_KEYCLOAK_CLIENT_SECRET}
+      - KEYCLOAK_ADMIN_CLIENT_ID=${KEYCLOAK_ADMIN_CLIENT_ID}
+      - KEYCLOAK_ADMIN_CLIENT_SECRET=${KEYCLOAK_ADMIN_CLIENT_SECRET}
+      - FRONTEND_URL=http://localhost:5173
+      - GATEWAY_URL=http://localhost
+      - ENV=dev
+    networks:
+      - backend
+      - shared-auth-network
+
+  backend_app2:
+    build: ..
+    profiles:
+      - app2
+    ports:
+      - "8001:8000"
+    environment:
+      - KEYCLOAK_SERVER_URL=http://keycloak:8080
+      - KEYCLOAK_EXTERNAL_URL=http://localhost:8080
+      - KEYCLOAK_REFRESH_URL=http://host.docker.internal:8080
+      - KEYCLOAK_CLIENT_ID=App2-Frontend-Client
+      - KEYCLOAK_REALM=${KEYCLOAK_REALM}
+      - KEYCLOAK_CLIENT_SECRET=${APP2_KEYCLOAK_CLIENT_SECRET}
+      - KEYCLOAK_ADMIN_CLIENT_ID=${KEYCLOAK_ADMIN_CLIENT_ID}
+      - KEYCLOAK_ADMIN_CLIENT_SECRET=${KEYCLOAK_ADMIN_CLIENT_SECRET}
+      - FRONTEND_URL=http://localhost:5173
+      - GATEWAY_URL=http://localhost/app2
+      - ENV=dev
+    networks:
+      backend:
+      shared-auth-network:
+        aliases:
+          - app2-backend
+
+  mailhog:
+    image: mailhog/mailhog
+    container_name: mailhog
+    profiles:
+      - app1
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    networks:
+      - backend
+
+  frontend:
+    image: node:20-alpine
+    container_name: frontend-app1
+    profiles:
+      - app1
+    working_dir: /app
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0 --port 5173"
+    environment:
+      - VITE_API_BASE=http://localhost
+    ports:
+      - "5173:5173"
+    volumes:
+      - ../../Frontend:/app
+      - frontend_node_modules:/app/node_modules
+    networks:
+      - backend
+
+  frontend_app2:
+    image: node:20-alpine
+    profiles:
+      - app2
+    working_dir: /app
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0 --port 5173"
+    environment:
+      - VITE_API_BASE=http://localhost/app2
+    ports:
+      - "5173:5173"
+    volumes:
+      - ../../Frontend:/app
+      - frontend2_node_modules:/app/node_modules
+    depends_on:
+      - backend_app2
+    networks:
+      - backend
+
+networks:
+  backend:
+    driver: bridge
+  shared-auth-network:
+    external: true
+    name: shared-auth-network
+
+volumes:
+  frontend_node_modules:
+  frontend2_node_modules:

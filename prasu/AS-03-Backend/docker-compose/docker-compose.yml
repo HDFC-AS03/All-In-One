@@ -1,0 +1,39 @@
+services:
+  backend:
+    build: ..
+    ports:
+      - "8000:8000"
+    environment:
+      - KEYCLOAK_SERVER_URL=http://keycloak:8080
+      - KEYCLOAK_EXTERNAL_URL=http://localhost:8080
+      - KEYCLOAK_REFRESH_URL=http://host.docker.internal:8080
+      - KEYCLOAK_CLIENT_ID=${KEYCLOAK_CLIENT_ID}
+      - KEYCLOAK_REALM=${KEYCLOAK_REALM}
+      - KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_CLIENT_SECRET}
+      - KEYCLOAK_ADMIN_CLIENT_ID=${KEYCLOAK_ADMIN_CLIENT_ID}
+      - KEYCLOAK_ADMIN_CLIENT_SECRET=${KEYCLOAK_ADMIN_CLIENT_SECRET}
+      - FRONTEND_URL=http://localhost:3000
+      - GATEWAY_URL=http://localhost
+      - ENV=dev
+    networks:
+      backend:
+      shared-auth-network:
+        aliases:
+          - app1-backend
+
+  frontend:
+    build:
+      context: ../../AS-03-Frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - backend
+
+networks:
+  backend:
+    driver: bridge
+  shared-auth-network:
+    external: true
+    name: shared-auth-network
