@@ -70,23 +70,24 @@ function RoleManagerModal({ user, onClose }) {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
 
-  useEffect(() => { fetchCurrentRoles(); }, []);
-
-  const fetchCurrentRoles = async () => {
-    setLoadingRoles(true);
-    setError(null);
-    try {
-      const res = await fetch(`${API_BASE}/admin/users/${user.id}/roles`, { credentials: "include" });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const json = await res.json();
-      const roles = json.data ?? json;
-      const roleKeys = roles.map(r => r.name).filter(name => Object.values(ROLE_MAP).includes(name));
-      setCurrentRoles(roleKeys);
-    } catch (err) {
-      setError("Could not load current roles: " + err.message);
-    }
-    setLoadingRoles(false);
-  };
+  useEffect(() => {
+    const fetchCurrentRoles = async () => {
+      setLoadingRoles(true);
+      setError(null);
+      try {
+        const res = await fetch(`${API_BASE}/admin/users/${user.id}/roles`, { credentials: "include" });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const json = await res.json();
+        const roles = json.data ?? json;
+        const roleKeys = roles.map(r => r.name).filter(name => Object.values(ROLE_MAP).includes(name));
+        setCurrentRoles(roleKeys);
+      } catch (err) {
+        setError("Could not load current roles: " + err.message);
+      }
+      setLoadingRoles(false);
+    };
+    fetchCurrentRoles();
+  }, [user.id]);
 
   const flash = (msg, isError = false) => {
     if (isError) { setError(msg); setSuccess(null); }
