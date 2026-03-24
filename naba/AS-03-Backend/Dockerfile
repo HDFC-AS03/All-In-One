@@ -11,6 +11,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the application code
 COPY . .
 
+# Remove test files and coverage reports from production image
+RUN rm -rf tests/ .pytest_cache/ .coverage coverage.* htmlcov/ *.json
+
 # Expose port
 EXPOSE 8000
 

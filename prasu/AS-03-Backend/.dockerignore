@@ -1,0 +1,46 @@
+# Version control
+.git
+.gitignore
+.github
+
+# Testing & Coverage
+tests/
+test_*.py
+*_test.py
+.pytest_cache/
+.coverage
+coverage.xml
+coverage.json
+htmlcov/
+COVERAGE_REPORT.*
+Realm-export/
+
+# Development
+venv/
+.venv
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.env
+.env.example
+.env.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Documentation
+*.md
+docs/
+
+# Docker
+Dockerfile
+docker-compose*
