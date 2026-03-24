@@ -382,7 +382,7 @@ function AdminView({ user }) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // VIEW 2: MANAGER DASHBOARD
 // ═══════════════════════════════════════════════════════════════════════════════
-function ManagerView({ user }) {
+function ManagerView() {
   const recentInvoices = [
     {
       id: "#INV-2024",
@@ -633,7 +633,7 @@ function ManagerView({ user }) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // VIEW 3: USER DASHBOARD (COMPLETED)
 // ═══════════════════════════════════════════════════════════════════════════════
-function UserView({ user }) {
+function UserView() {
   const transactions = [
     {
       title: "Netflix Subscription",

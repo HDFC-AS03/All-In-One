@@ -17,6 +17,7 @@ ACCESS_TOKEN_COOKIE = "access_token"  # httpOnly cookie for access token
 REFRESH_TOKEN_COOKIE = "refresh_token"  # httpOnly cookie for refresh token
 CSRF_COOKIE_NAME = "csrf_token"
 OAUTH_STATE_COOKIE = "oauth_state"  # For PKCE/state during OAuth flow
+PKCE_VERIFIER_COOKIE = "pkce_verifier"  # PKCE verifier for OAuth2 code flow
 ACCESS_TOKEN_MAX_AGE = 60 * 5  # 5 minutes (short-lived)
 REFRESH_TOKEN_MAX_AGE = 60 * 60 * 24 * 7  # 7 days
 OAUTH_STATE_MAX_AGE = 60 * 5  # 5 minutes for OAuth state
