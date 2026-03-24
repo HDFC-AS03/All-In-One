@@ -161,7 +161,7 @@ jobs:
             local image="$1"
             local dockerfile="$2"
             local context="$3"
-            include=$(echo "$include" | jq --arg image "$image" --arg dockerfile "$dockerfile" --arg context "$context" '. + [{"image":$image,"dockerfile":$dockerfile,"context":$context}]')
+            include=$(echo "$include" | jq -c --arg image "$image" --arg dockerfile "$dockerfile" --arg context "$context" '. + [{"image":$image,"dockerfile":$dockerfile,"context":$context}]')
           }
 
           if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
@@ -191,11 +191,12 @@ jobs:
           fi
 
           has_images=false
-          if [ "$(echo "$include" | jq 'length')" -gt 0 ]; then
+          if [ "$(echo "$include" | jq -c 'length')" -gt 0 ]; then
             has_images=true
           fi
 
-          echo "cd_matrix={\"include\":$include}" >> "$GITHUB_OUTPUT"
+          cd_matrix_json=$(printf '{"include":%s}' "$include")
+          echo "cd_matrix=$cd_matrix_json" >> "$GITHUB_OUTPUT"
           echo "has_cd_images=$has_images" >> "$GITHUB_OUTPUT"
 
   cd:
