@@ -219,6 +219,9 @@ jobs:
             # Create shared network if it doesn't exist
             docker network create shared-auth-network 2>/dev/null || true
             
+            # Clean up old containers to avoid metadata conflicts
+            docker-compose down --remove-orphans 2>/dev/null || true
+            
             docker-compose pull
             docker-compose up -d
             sleep 5
@@ -281,6 +284,9 @@ jobs:
             # Create shared network if it doesn't exist
             docker network create shared-auth-network 2>/dev/null || true
             
+            # Clean up old containers to avoid metadata conflicts
+            docker-compose down --remove-orphans 2>/dev/null || true
+            
             docker-compose pull
             docker-compose up -d
             sleep 5
@@ -342,6 +348,9 @@ jobs:
             
             # Create shared network if it doesn't exist
             docker network create shared-auth-network 2>/dev/null || true
+            
+            # Clean up old containers to avoid metadata conflicts
+            docker-compose down --remove-orphans 2>/dev/null || true
             
             docker-compose pull
             docker-compose up -d
