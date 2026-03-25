@@ -1,35 +1,47 @@
+version: '3.8'
+
 services:
   backend:
-    build: ..
+    image: ghcr.io/hdfc-as03/prasu-backend:${IMAGE_TAG:-latest}
+    container_name: prasu-backend
     ports:
       - "8000:8000"
     environment:
-      - KEYCLOAK_SERVER_URL=http://keycloak:8080
-      - KEYCLOAK_EXTERNAL_URL=http://localhost:8080
-      - KEYCLOAK_REFRESH_URL=http://host.docker.internal:8080
-      - KEYCLOAK_CLIENT_ID=${KEYCLOAK_CLIENT_ID}
+      - KEYCLOAK_SERVER_URL=${KEYCLOAK_SERVER_URL}
       - KEYCLOAK_REALM=${KEYCLOAK_REALM}
+      - KEYCLOAK_CLIENT_ID=${KEYCLOAK_CLIENT_ID}
       - KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_CLIENT_SECRET}
       - KEYCLOAK_ADMIN_CLIENT_ID=${KEYCLOAK_ADMIN_CLIENT_ID}
       - KEYCLOAK_ADMIN_CLIENT_SECRET=${KEYCLOAK_ADMIN_CLIENT_SECRET}
-      - FRONTEND_URL=http://localhost:3000
-      - GATEWAY_URL=http://localhost
-      - ENV=dev
+      - GATEWAY_URL=${GATEWAY_URL:-http://gateway}
+      - ENV=${ENV:-production}
     networks:
-      backend:
-      shared-auth-network:
-        aliases:
-          - app1-backend
+      - backend
+      - shared-auth-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   frontend:
-    build:
-      context: ../../AS-03-Frontend
+    image: ghcr.io/hdfc-as03/prasu-frontend:${IMAGE_TAG:-latest}
+    container_name: prasu-frontend
     ports:
-      - "3000:80"
-    depends_on:
-      - backend
+      - "80:80"
+    environment:
+      - VITE_API_BASE=${VITE_API_BASE:-http://localhost}
     networks:
       - backend
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
 networks:
   backend:

@@ -1,13 +1,23 @@
+version: '3.8'
+
 services:
   gateway:
-    build: ./gateway
+    image: ghcr.io/hdfc-as03/shared-gateway:${IMAGE_TAG:-latest}
+    container_name: shared-gateway
     ports:
       - "80:80"
-    volumes:
-      - ./gateway/nginx.conf:/usr/local/openresty/nginx/conf/nginx.conf
-      - ./gateway/lua:/usr/local/openresty/nginx/lua
+      - "443:443"
+    environment:
+      - ENV=${ENV:-production}
     networks:
       - shared-auth-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
 networks:
   shared-auth-network:

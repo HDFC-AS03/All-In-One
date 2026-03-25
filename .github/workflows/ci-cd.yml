@@ -184,14 +184,31 @@ jobs:
           port: ${{ secrets.INSTANCE1_PORT || '22' }}
           script_stop: true
           script: |
-            export GHCR_USERNAME='${{ github.actor }}'
-            export NABA_BACKEND_IMAGE='ghcr.io/${{ steps.lowercase.outputs.owner }}/naba-backend:${{ github.sha }}'
-            export NABA_FRONTEND_IMAGE='ghcr.io/${{ steps.lowercase.outputs.owner }}/naba-frontend:${{ github.sha }}'
-            export DEPLOY_ENV='${{ github.event_name == 'workflow_dispatch' && github.event.inputs.environment || 'production' }}'
+            set -e
             
-            ${{ secrets.INSTANCE1_MIGRATION_COMMAND }}
-            ${{ secrets.INSTANCE1_DEPLOY_COMMAND }}
-            ${{ secrets.INSTANCE1_HEALTHCHECK_COMMAND }}
+            # Login to GHCR
+            echo '${{ secrets.GITHUB_TOKEN }}' | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            
+            # Set environment variables
+            export IMAGE_TAG='${{ github.sha }}'
+            export KEYCLOAK_REALM='${{ secrets.KEYCLOAK_REALM }}'
+            export KEYCLOAK_CLIENT_ID='${{ secrets.KEYCLOAK_CLIENT_ID }}'
+            export KEYCLOAK_CLIENT_SECRET='${{ secrets.KEYCLOAK_CLIENT_SECRET }}'
+            export KEYCLOAK_ADMIN_CLIENT_ID='${{ secrets.KEYCLOAK_ADMIN_CLIENT_ID }}'
+            export KEYCLOAK_ADMIN_CLIENT_SECRET='${{ secrets.KEYCLOAK_ADMIN_CLIENT_SECRET }}'
+            export KEYCLOAK_SERVER_URL='${{ secrets.KEYCLOAK_SERVER_URL }}'
+            export GATEWAY_URL='${{ secrets.GATEWAY_URL }}'
+            export VITE_API_BASE='${{ secrets.VITE_API_BASE }}'
+            export ENV='${{ github.event_name == 'workflow_dispatch' && github.event.inputs.environment || 'production' }}'
+            
+            # Deploy
+            cd ~/deployment/naba
+            docker-compose pull
+            docker-compose up -d
+            
+            # Health check
+            sleep 5
+            docker-compose ps
       - uses: appleboy/scp-action@master
         with:
           host: ${{ secrets.INSTANCE1_HOST }}
@@ -223,14 +240,31 @@ jobs:
           port: ${{ secrets.INSTANCE2_PORT || '22' }}
           script_stop: true
           script: |
-            export GHCR_USERNAME='${{ github.actor }}'
-            export PRASU_BACKEND_IMAGE='ghcr.io/${{ steps.lowercase.outputs.owner }}/prasu-backend:${{ github.sha }}'
-            export PRASU_FRONTEND_IMAGE='ghcr.io/${{ steps.lowercase.outputs.owner }}/prasu-frontend:${{ github.sha }}'
-            export DEPLOY_ENV='${{ github.event_name == 'workflow_dispatch' && github.event.inputs.environment || 'production' }}'
+            set -e
             
-            ${{ secrets.INSTANCE2_MIGRATION_COMMAND }}
-            ${{ secrets.INSTANCE2_DEPLOY_COMMAND }}
-            ${{ secrets.INSTANCE2_HEALTHCHECK_COMMAND }}
+            # Login to GHCR
+            echo '${{ secrets.GITHUB_TOKEN }}' | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            
+            # Set environment variables
+            export IMAGE_TAG='${{ github.sha }}'
+            export KEYCLOAK_REALM='${{ secrets.KEYCLOAK_REALM }}'
+            export KEYCLOAK_CLIENT_ID='${{ secrets.KEYCLOAK_CLIENT_ID }}'
+            export KEYCLOAK_CLIENT_SECRET='${{ secrets.KEYCLOAK_CLIENT_SECRET }}'
+            export KEYCLOAK_ADMIN_CLIENT_ID='${{ secrets.KEYCLOAK_ADMIN_CLIENT_ID }}'
+            export KEYCLOAK_ADMIN_CLIENT_SECRET='${{ secrets.KEYCLOAK_ADMIN_CLIENT_SECRET }}'
+            export KEYCLOAK_SERVER_URL='${{ secrets.KEYCLOAK_SERVER_URL }}'
+            export GATEWAY_URL='${{ secrets.GATEWAY_URL }}'
+            export VITE_API_BASE='${{ secrets.VITE_API_BASE }}'
+            export ENV='${{ github.event_name == 'workflow_dispatch' && github.event.inputs.environment || 'production' }}'
+            
+            # Deploy
+            cd ~/deployment/prasu
+            docker-compose pull
+            docker-compose up -d
+            
+            # Health check
+            sleep 5
+            docker-compose ps
       - uses: appleboy/scp-action@master
         with:
           host: ${{ secrets.INSTANCE2_HOST }}
@@ -262,12 +296,23 @@ jobs:
           port: ${{ secrets.INSTANCE3_PORT || '22' }}
           script_stop: true
           script: |
-            export GHCR_USERNAME='${{ github.actor }}'
-            export GATEWAY_IMAGE='ghcr.io/${{ steps.lowercase.outputs.owner }}/shared-gateway:${{ github.sha }}'
-            export DEPLOY_ENV='${{ github.event_name == 'workflow_dispatch' && github.event.inputs.environment || 'production' }}'
+            set -e
             
-            ${{ secrets.INSTANCE3_DEPLOY_COMMAND }}
-            ${{ secrets.INSTANCE3_HEALTHCHECK_COMMAND }}
+            # Login to GHCR
+            echo '${{ secrets.GITHUB_TOKEN }}' | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            
+            # Set environment variables
+            export IMAGE_TAG='${{ github.sha }}'
+            export ENV='${{ github.event_name == 'workflow_dispatch' && github.event.inputs.environment || 'production' }}'
+            
+            # Deploy
+            cd ~/deployment/gateway
+            docker-compose pull
+            docker-compose up -d
+            
+            # Health check
+            sleep 5
+            docker-compose ps
       - uses: appleboy/scp-action@master
         with:
           host: ${{ secrets.INSTANCE3_HOST }}
