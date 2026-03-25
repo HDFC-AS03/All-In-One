@@ -227,6 +227,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Convert repository owner to lowercase
+        id: lowercase
+        run: |
+          OWNER=$(echo ${{ github.repository_owner }} | tr '[:upper:]' '[:lower:]')
+          echo "owner=$OWNER" >> "$GITHUB_OUTPUT"
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -246,8 +252,8 @@ jobs:
           cache-from: type=gha,scope=${{ matrix.image }}
           cache-to: type=gha,scope=${{ matrix.image }},mode=max
           tags: |
-            ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}:latest
-            ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}:${{ github.sha }}
+            ghcr.io/${{ steps.lowercase.outputs.owner }}/${{ matrix.image }}:latest
+            ghcr.io/${{ steps.lowercase.outputs.owner }}/${{ matrix.image }}:${{ github.sha }}
 
   deploy-instance1-naba:
     name: Deploy naba -> instance1
@@ -277,6 +283,12 @@ jobs:
           test -n "$INSTANCE1_HEALTHCHECK_COMMAND"
           test -n "$INSTANCE1_ROLLBACK_COMMAND"
 
+      - name: Convert repository owner to lowercase
+        id: lowercase
+        run: |
+          OWNER=$(echo ${{ github.repository_owner }} | tr '[:upper:]' '[:lower:]')
+          echo "owner=$OWNER" >> "$GITHUB_OUTPUT"
+
       - name: SSH deploy to instance1
         uses: appleboy/ssh-action@v1.2.0
         with:
@@ -288,8 +300,8 @@ jobs:
           script: |
             set -euo pipefail
             export GHCR_USERNAME='${{ github.actor }}'
-            export NABA_BACKEND_IMAGE='ghcr.io/${{ github.repository_owner }}/naba-backend:${{ github.sha }}'
-            export NABA_FRONTEND_IMAGE='ghcr.io/${{ github.repository_owner }}/naba-frontend:${{ github.sha }}'
+            export NABA_BACKEND_IMAGE='ghcr.io/${{ steps.lowercase.outputs.owner }}/naba-backend:${{ github.sha }}'
+            export NABA_FRONTEND_IMAGE='ghcr.io/${{ steps.lowercase.outputs.owner }}/naba-frontend:${{ github.sha }}'
             export DEPLOY_ENV='${{ github.event_name == 'workflow_dispatch' && github.event.inputs.environment || 'production' }}'
 
             if [ -n "${{ secrets.INSTANCE1_MIGRATION_COMMAND }}" ]; then
@@ -332,6 +344,12 @@ jobs:
           test -n "$INSTANCE2_HEALTHCHECK_COMMAND"
           test -n "$INSTANCE2_ROLLBACK_COMMAND"
 
+      - name: Convert repository owner to lowercase
+        id: lowercase
+        run: |
+          OWNER=$(echo ${{ github.repository_owner }} | tr '[:upper:]' '[:lower:]')
+          echo "owner=$OWNER" >> "$GITHUB_OUTPUT"
+
       - name: SSH deploy to instance2
         uses: appleboy/ssh-action@v1.2.0
         with:
@@ -343,8 +361,8 @@ jobs:
           script: |
             set -euo pipefail
             export GHCR_USERNAME='${{ github.actor }}'
-            export PRASU_BACKEND_IMAGE='ghcr.io/${{ github.repository_owner }}/prasu-backend:${{ github.sha }}'
-            export PRASU_FRONTEND_IMAGE='ghcr.io/${{ github.repository_owner }}/prasu-frontend:${{ github.sha }}'
+            export PRASU_BACKEND_IMAGE='ghcr.io/${{ steps.lowercase.outputs.owner }}/prasu-backend:${{ github.sha }}'
+            export PRASU_FRONTEND_IMAGE='ghcr.io/${{ steps.lowercase.outputs.owner }}/prasu-frontend:${{ github.sha }}'
             export DEPLOY_ENV='${{ github.event_name == 'workflow_dispatch' && github.event.inputs.environment || 'production' }}'
 
             if [ -n "${{ secrets.INSTANCE2_MIGRATION_COMMAND }}" ]; then
@@ -381,7 +399,13 @@ jobs:
         run: |
           set -euo pipefail
           test -n "$INSTANCE3_HOST"
-          test -n "$INSTANCE3_USER"
+          testConvert repository owner to lowercase
+        id: lowercase
+        run: |
+          OWNER=$(echo ${{ github.repository_owner }} | tr '[:upper:]' '[:lower:]')
+          echo "owner=$OWNER" >> "$GITHUB_OUTPUT"
+
+      - name:  -n "$INSTANCE3_USER"
           test -n "$INSTANCE3_SSH_KEY"
           test -n "$INSTANCE3_DEPLOY_COMMAND"
           test -n "$INSTANCE3_HEALTHCHECK_COMMAND"
@@ -398,7 +422,7 @@ jobs:
           script: |
             set -euo pipefail
             export GHCR_USERNAME='${{ github.actor }}'
-            export GATEWAY_IMAGE='ghcr.io/${{ github.repository_owner }}/shared-gateway:${{ github.sha }}'
+            export GATEWAY_IMAGE='ghcr.io/${{ steps.lowercase.outputs.owner }}/shared-gateway:${{ github.sha }}'
             export DEPLOY_ENV='${{ github.event_name == 'workflow_dispatch' && github.event.inputs.environment || 'production' }}'
 
             ${{ secrets.INSTANCE3_DEPLOY_COMMAND }}
