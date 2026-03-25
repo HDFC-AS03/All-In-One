@@ -1,14 +1,13 @@
-# Use Node.js 18 Alpine as base image
-FROM node:18-alpine
+# Build stage
+FROM node:20-alpine AS builder
 
-# Set working directory
 WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
 
 # Install dependencies
-RUN npm install
+RUN npm ci
 
 # Copy source code
 COPY . .
@@ -16,14 +15,15 @@ COPY . .
 # Build the application
 RUN npm run build
 
-# Remove test files and dependencies from production image
-RUN rm -rf src/__tests__/ src/**/*.test.js src/**/*.test.jsx jest.* babylon.config.* .eslintrc* node_modules .coverage coverage htmlcov .pytest* tests/
+# Production stage
+FROM nginx:alpine
 
-# Expose port 80
-EXPOSE 80
+# Copy built files to nginx
+COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Install serve to serve the built application
-RUN npm install -g serve
+# Copy nginx config
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# Start the application
-CMD ["serve", "-s", "dist", "-l", "80"]
+EXPOSE 3000
+
+CMD ["nginx", "-g", "daemon off;"]

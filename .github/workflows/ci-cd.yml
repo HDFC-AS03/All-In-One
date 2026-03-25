@@ -118,7 +118,9 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       naba_backend_changed: ${{ steps.filter.outputs.naba_backend }}
+      naba_frontend_changed: ${{ steps.filter.outputs.naba_frontend }}
       prasu_backend_changed: ${{ steps.filter.outputs.prasu_backend }}
+      prasu_frontend_changed: ${{ steps.filter.outputs.prasu_frontend }}
       gateway_changed: ${{ steps.filter.outputs.gateway }}
       cd_matrix: ${{ steps.matrix.outputs.cd_matrix }}
       has_cd_images: ${{ steps.matrix.outputs.has_cd_images }}
@@ -135,8 +137,12 @@ jobs:
           filters: |
             naba_backend:
               - 'naba/AS-03-Backend/**'
+            naba_frontend:
+              - 'naba/Frontend/**'
             prasu_backend:
               - 'prasu/AS-03-Backend/**'
+            prasu_frontend:
+              - 'prasu/AS-03-Frontend/**'
             gateway:
               - 'shared-infra/gateway/**'
 
@@ -145,8 +151,10 @@ jobs:
         env:
           EVENT_NAME: ${{ github.event_name }}
           DEPLOY_TARGET: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_target || 'all' }}
-          NABA_CHANGED: ${{ steps.filter.outputs.naba_backend }}
-          PRASU_CHANGED: ${{ steps.filter.outputs.prasu_backend }}
+          NABA_BACKEND_CHANGED: ${{ steps.filter.outputs.naba_backend }}
+          NABA_FRONTEND_CHANGED: ${{ steps.filter.outputs.naba_frontend }}
+          PRASU_BACKEND_CHANGED: ${{ steps.filter.outputs.prasu_backend }}
+          PRASU_FRONTEND_CHANGED: ${{ steps.filter.outputs.prasu_frontend }}
           GATEWAY_CHANGED: ${{ steps.filter.outputs.gateway }}
         run: |
           include='[]'
@@ -161,22 +169,32 @@ jobs:
           if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
             if [ "$DEPLOY_TARGET" = "all" ] || [ "$DEPLOY_TARGET" = "naba" ]; then
               add_image "naba-backend" "naba/AS-03-Backend/Dockerfile" "naba/AS-03-Backend"
+              add_image "naba-frontend" "naba/Frontend/Dockerfile" "naba/Frontend"
             fi
 
             if [ "$DEPLOY_TARGET" = "all" ] || [ "$DEPLOY_TARGET" = "prasu" ]; then
               add_image "prasu-backend" "prasu/AS-03-Backend/Dockerfile" "prasu/AS-03-Backend"
+              add_image "prasu-frontend" "prasu/AS-03-Frontend/Dockerfile" "prasu/AS-03-Frontend"
             fi
 
             if [ "$DEPLOY_TARGET" = "all" ] || [ "$DEPLOY_TARGET" = "gateway" ]; then
               add_image "shared-gateway" "shared-infra/gateway/Dockerfile" "shared-infra/gateway"
             fi
           else
-            if [ "$NABA_CHANGED" = "true" ]; then
+            if [ "$NABA_BACKEND_CHANGED" = "true" ]; then
               add_image "naba-backend" "naba/AS-03-Backend/Dockerfile" "naba/AS-03-Backend"
             fi
 
-            if [ "$PRASU_CHANGED" = "true" ]; then
+            if [ "$NABA_FRONTEND_CHANGED" = "true" ]; then
+              add_image "naba-frontend" "naba/Frontend/Dockerfile" "naba/Frontend"
+            fi
+
+            if [ "$PRASU_BACKEND_CHANGED" = "true" ]; then
               add_image "prasu-backend" "prasu/AS-03-Backend/Dockerfile" "prasu/AS-03-Backend"
+            fi
+
+            if [ "$PRASU_FRONTEND_CHANGED" = "true" ]; then
+              add_image "prasu-frontend" "prasu/AS-03-Frontend/Dockerfile" "prasu/AS-03-Frontend"
             fi
 
             if [ "$GATEWAY_CHANGED" = "true" ]; then
@@ -240,7 +258,7 @@ jobs:
       - detect-changes
       - cd
     environment: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.environment || 'production' }}
-    if: ${{ (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && needs.detect-changes.outputs.naba_backend_changed == 'true') || (github.event_name == 'workflow_dispatch' && (github.event.inputs.deploy_target == 'all' || github.event.inputs.deploy_target == 'naba')) }}
+    if: ${{ (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && (needs.detect-changes.outputs.naba_backend_changed == 'true' || needs.detect-changes.outputs.naba_frontend_changed == 'true')) || (github.event_name == 'workflow_dispatch' && (github.event.inputs.deploy_target == 'all' || github.event.inputs.deploy_target == 'naba')) }}
     steps:
       - name: Validate instance1 secrets
         env:
@@ -270,7 +288,8 @@ jobs:
           script: |
             set -euo pipefail
             export GHCR_USERNAME='${{ github.actor }}'
-            export NABA_IMAGE='ghcr.io/${{ github.repository_owner }}/naba-backend:${{ github.sha }}'
+            export NABA_BACKEND_IMAGE='ghcr.io/${{ github.repository_owner }}/naba-backend:${{ github.sha }}'
+            export NABA_FRONTEND_IMAGE='ghcr.io/${{ github.repository_owner }}/naba-frontend:${{ github.sha }}'
             export DEPLOY_ENV='${{ github.event_name == 'workflow_dispatch' && github.event.inputs.environment || 'production' }}'
 
             if [ -n "${{ secrets.INSTANCE1_MIGRATION_COMMAND }}" ]; then
@@ -294,7 +313,7 @@ jobs:
       - detect-changes
       - cd
     environment: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.environment || 'production' }}
-    if: ${{ (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && needs.detect-changes.outputs.prasu_backend_changed == 'true') || (github.event_name == 'workflow_dispatch' && (github.event.inputs.deploy_target == 'all' || github.event.inputs.deploy_target == 'prasu')) }}
+    if: ${{ (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && (needs.detect-changes.outputs.prasu_backend_changed == 'true' || needs.detect-changes.outputs.prasu_frontend_changed == 'true')) || (github.event_name == 'workflow_dispatch' && (github.event.inputs.deploy_target == 'all' || github.event.inputs.deploy_target == 'prasu')) }}
     steps:
       - name: Validate instance2 secrets
         env:
@@ -324,7 +343,8 @@ jobs:
           script: |
             set -euo pipefail
             export GHCR_USERNAME='${{ github.actor }}'
-            export PRASU_IMAGE='ghcr.io/${{ github.repository_owner }}/prasu-backend:${{ github.sha }}'
+            export PRASU_BACKEND_IMAGE='ghcr.io/${{ github.repository_owner }}/prasu-backend:${{ github.sha }}'
+            export PRASU_FRONTEND_IMAGE='ghcr.io/${{ github.repository_owner }}/prasu-frontend:${{ github.sha }}'
             export DEPLOY_ENV='${{ github.event_name == 'workflow_dispatch' && github.event.inputs.environment || 'production' }}'
 
             if [ -n "${{ secrets.INSTANCE2_MIGRATION_COMMAND }}" ]; then
