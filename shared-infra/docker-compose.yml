@@ -22,4 +22,4 @@ services:
 networks:
   shared-auth-network:
     name: shared-auth-network
-    external: true
+    driver: bridge

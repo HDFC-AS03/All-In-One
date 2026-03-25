@@ -47,5 +47,5 @@ networks:
   backend:
     driver: bridge
   shared-auth-network:
-    external: true
     name: shared-auth-network
+    driver: bridge
