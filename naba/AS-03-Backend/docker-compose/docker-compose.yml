@@ -24,9 +24,9 @@ services:
     image: ghcr.io/hdfc-as03/naba-frontend:${IMAGE_TAG:-latest}
     container_name: naba-frontend
     ports:
-      - "80:80"
+      - "3000:80"
     environment:
-      - VITE_API_BASE=${VITE_API_BASE:-http://localhost}
+      - VITE_API_BASE=http://44.196.204.173:8000
     networks:
       - backend
     restart: unless-stopped
