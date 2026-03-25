@@ -19,12 +19,6 @@ services:
       - backend
       - shared-auth-network
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
 
   frontend:
     image: ghcr.io/hdfc-as03/prasu-frontend:${IMAGE_TAG:-latest}
@@ -36,12 +30,6 @@ services:
     networks:
       - backend
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost/"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
 
 networks:
   backend:
