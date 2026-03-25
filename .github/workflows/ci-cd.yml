@@ -216,9 +216,6 @@ jobs:
             cd ~/deployment/naba/naba/AS-03-Backend/docker-compose
             ls -la
             
-            # Create shared network if it doesn't exist
-            docker network create shared-auth-network 2>/dev/null || true
-            
             # Clean up old containers to avoid metadata conflicts
             docker-compose down --remove-orphans 2>/dev/null || true
             
@@ -281,9 +278,6 @@ jobs:
             cd ~/deployment/prasu/prasu/AS-03-Backend/docker-compose
             ls -la
             
-            # Create shared network if it doesn't exist
-            docker network create shared-auth-network 2>/dev/null || true
-            
             # Clean up old containers to avoid metadata conflicts
             docker-compose down --remove-orphans 2>/dev/null || true
             
@@ -345,9 +339,6 @@ jobs:
             # Deploy
             cd ~/deployment/gateway/shared-infra
             ls -la
-            
-            # Create shared network if it doesn't exist
-            docker network create shared-auth-network 2>/dev/null || true
             
             # Clean up old containers to avoid metadata conflicts
             docker-compose down --remove-orphans 2>/dev/null || true
