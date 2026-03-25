@@ -399,17 +399,17 @@ jobs:
         run: |
           set -euo pipefail
           test -n "$INSTANCE3_HOST"
-          testConvert repository owner to lowercase
-        id: lowercase
-        run: |
-          OWNER=$(echo ${{ github.repository_owner }} | tr '[:upper:]' '[:lower:]')
-          echo "owner=$OWNER" >> "$GITHUB_OUTPUT"
-
-      - name:  -n "$INSTANCE3_USER"
+          test -n "$INSTANCE3_USER"
           test -n "$INSTANCE3_SSH_KEY"
           test -n "$INSTANCE3_DEPLOY_COMMAND"
           test -n "$INSTANCE3_HEALTHCHECK_COMMAND"
           test -n "$INSTANCE3_ROLLBACK_COMMAND"
+
+      - name: Convert repository owner to lowercase
+        id: lowercase
+        run: |
+          OWNER=$(echo ${{ github.repository_owner }} | tr '[:upper:]' '[:lower:]')
+          echo "owner=$OWNER" >> "$GITHUB_OUTPUT"
 
       - name: SSH deploy to instance3
         uses: appleboy/ssh-action@v1.2.0
