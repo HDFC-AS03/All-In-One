@@ -216,8 +216,9 @@ jobs:
             cd ~/deployment/naba/naba/AS-03-Backend/docker-compose
             ls -la
             
-            # Clean up old containers to avoid metadata conflicts
+            # Clean up old containers and networks to avoid metadata conflicts
             docker-compose down --remove-orphans 2>/dev/null || true
+            docker network rm shared-auth-network 2>/dev/null || true
             
             docker-compose pull
             docker-compose up -d
@@ -278,8 +279,9 @@ jobs:
             cd ~/deployment/prasu/prasu/AS-03-Backend/docker-compose
             ls -la
             
-            # Clean up old containers to avoid metadata conflicts
+            # Clean up old containers and networks to avoid metadata conflicts
             docker-compose down --remove-orphans 2>/dev/null || true
+            docker network rm shared-auth-network 2>/dev/null || true
             
             docker-compose pull
             docker-compose up -d
@@ -340,8 +342,9 @@ jobs:
             cd ~/deployment/gateway/shared-infra
             ls -la
             
-            # Clean up old containers to avoid metadata conflicts
+            # Clean up old containers and networks to avoid metadata conflicts
             docker-compose down --remove-orphans 2>/dev/null || true
+            docker network rm shared-auth-network 2>/dev/null || true
             
             docker-compose pull
             docker-compose up -d
