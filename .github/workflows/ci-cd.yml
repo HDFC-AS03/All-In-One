@@ -199,7 +199,7 @@ jobs:
           key: ${{ secrets.INSTANCE1_SSH_KEY }}
           port: ${{ secrets.INSTANCE1_PORT || '22' }}
           source: "naba/AS-03-Backend/docker-compose/docker-compose.yml"
-          target: "${{ secrets.INSTANCE1_DEPLOY_PATH || '/opt/naba' }}"
+          target: "~/deployment/naba"
 
   deploy-prasu-instance:
     name: Deploy prasu → Instance 2
@@ -238,7 +238,7 @@ jobs:
           key: ${{ secrets.INSTANCE2_SSH_KEY }}
           port: ${{ secrets.INSTANCE2_PORT || '22' }}
           source: "prasu/AS-03-Backend/docker-compose/docker-compose.yml"
-          target: "${{ secrets.INSTANCE2_DEPLOY_PATH || '/opt/prasu' }}"
+          target: "~/deployment/prasu"
 
   deploy-gateway-instance:
     name: Deploy gateway → Instance 3
@@ -275,5 +275,5 @@ jobs:
           key: ${{ secrets.INSTANCE3_SSH_KEY }}
           port: ${{ secrets.INSTANCE3_PORT || '22' }}
           source: "shared-infra/docker-compose.yml"
-          target: "${{ secrets.INSTANCE3_DEPLOY_PATH || '/opt/gateway' }}"
+          target: "~/deployment/gateway"
 
