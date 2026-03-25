@@ -202,7 +202,9 @@ jobs:
             export ENV='${{ github.event_name == 'workflow_dispatch' && github.event.inputs.environment || 'production' }}'
             
             # Deploy
+            mkdir -p ~/deployment/naba
             cd ~/deployment/naba
+            ls -la
             docker-compose pull
             docker-compose up -d
             
@@ -216,7 +218,8 @@ jobs:
           key: ${{ secrets.INSTANCE1_SSH_KEY }}
           port: ${{ secrets.INSTANCE1_PORT || '22' }}
           source: "naba/AS-03-Backend/docker-compose/docker-compose.yml"
-          target: "~/deployment/naba"
+          target: "~/deployment/naba/"
+          strip_prefix: true
 
   deploy-prasu-instance:
     name: Deploy prasu → Instance 2
@@ -258,7 +261,9 @@ jobs:
             export ENV='${{ github.event_name == 'workflow_dispatch' && github.event.inputs.environment || 'production' }}'
             
             # Deploy
+            mkdir -p ~/deployment/prasu
             cd ~/deployment/prasu
+            ls -la
             docker-compose pull
             docker-compose up -d
             
@@ -272,7 +277,8 @@ jobs:
           key: ${{ secrets.INSTANCE2_SSH_KEY }}
           port: ${{ secrets.INSTANCE2_PORT || '22' }}
           source: "prasu/AS-03-Backend/docker-compose/docker-compose.yml"
-          target: "~/deployment/prasu"
+          target: "~/deployment/prasu/"
+          strip_prefix: true
 
   deploy-gateway-instance:
     name: Deploy gateway → Instance 3
@@ -306,7 +312,9 @@ jobs:
             export ENV='${{ github.event_name == 'workflow_dispatch' && github.event.inputs.environment || 'production' }}'
             
             # Deploy
+            mkdir -p ~/deployment/gateway
             cd ~/deployment/gateway
+            ls -la
             docker-compose pull
             docker-compose up -d
             
@@ -320,5 +328,6 @@ jobs:
           key: ${{ secrets.INSTANCE3_SSH_KEY }}
           port: ${{ secrets.INSTANCE3_PORT || '22' }}
           source: "shared-infra/docker-compose.yml"
-          target: "~/deployment/gateway"
+          target: "~/deployment/gateway/"
+          strip_prefix: true
 
